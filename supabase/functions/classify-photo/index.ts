@@ -14,7 +14,26 @@ const VALID_CATEGORIES = [
 ] as const;
 
 const PROMPT =
-  "pothole / streetlight / garbage / water leak / road safety / other";
+  "Classify the civic issue shown in this photo into exactly one of these categories: pothole, streetlight, garbage, water leak, road safety, other. Respond with only the category name and nothing else.";
+
+const CATEGORY_ALIASES: Record<string, string> = {
+  pothole: "pothole",
+  streetlight: "streetlight",
+  street_light: "streetlight",
+  "street light": "streetlight",
+  street_lighting: "streetlight",
+  garbage: "garbage",
+  trash: "garbage",
+  litter: "garbage",
+  water_leak: "water_leak",
+  "water leak": "water_leak",
+  water: "water_leak",
+  leak: "water_leak",
+  road_safety: "road_safety",
+  "road safety": "road_safety",
+  traffic: "road_safety",
+  other: "other",
+};
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -94,12 +113,17 @@ Deno.serve(async (req: Request) => {
     const text: string =
       geminiData?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    const cleaned = text.trim().toLowerCase().replace(/\s+/g, "_").replace(/[^a-z_]/g, "");
+    const cleaned = text.trim().toLowerCase().replace(/[^a-z\s_]/g, "").trim();
+
+    const normalized = CATEGORY_ALIASES[cleaned] ??
+      CATEGORY_ALIASES[cleaned.replace(/\s+/g, "_")] ??
+      CATEGORY_ALIASES[cleaned.replace(/_/g, "")] ??
+      "other";
 
     const category = VALID_CATEGORIES.includes(
-      cleaned as (typeof VALID_CATEGORIES)[number]
+      normalized as (typeof VALID_CATEGORIES)[number]
     )
-      ? cleaned
+      ? normalized
       : "other";
 
     return new Response(
