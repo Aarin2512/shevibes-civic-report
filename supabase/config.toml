@@ -1,0 +1,2 @@
+[functions.classify-photo]
+verify_jwt = true
